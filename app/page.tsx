@@ -1,29 +1,31 @@
 "use client"
 import { Tabs, Tab, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, getKeyValue } from "@nextui-org/react";
 
+import InputTable from "@/components/Table/InputTable";
+
 export default function Home() {
 
   const rows = [
     {
-      key: "1",
+      id: "1",
       name: "Tony Reichert",
       role: "CEO",
       status: "Active",
     },
     {
-      key: "2",
+      id: "2",
       name: "Zoey Lang",
       role: "Technical Lead",
       status: "Paused",
     },
     {
-      key: "3",
+      id: "3",
       name: "Jane Fisher",
       role: "Senior Developer",
       status: "Active",
     },
     {
-      key: "4",
+      id: "4",
       name: "William Howard",
       role: "Community Manager",
       status: "Vacation",
@@ -52,18 +54,27 @@ export default function Home() {
     >
       <Tab title="tab1">
 
-        <Table aria-label="Example table with dynamic content">
+        {/* <Table aria-label="Example table with dynamic content">
           <TableHeader columns={columns}>
             {(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
           </TableHeader>
           <TableBody items={rows}>
             {(item) => (
-              <TableRow key={item.key}>
+              <TableRow key={item.id}>
                 {(columnKey) => <TableCell>{getKeyValue(item, columnKey)}</TableCell>}
               </TableRow>
             )}
           </TableBody>
-        </Table>
+        </Table> */}
+
+        {/* <InputTable
+          columns={columns}
+          rows={rows}
+          tableLabel="Status table"
+          displayTableLabel
+          isHeaderSticky
+          displayTopContent
+        /> */}
 
       </Tab>
 

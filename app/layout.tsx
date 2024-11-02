@@ -18,7 +18,7 @@ export default function RootLayout({
       >
         <main className="min-h-[calc(100vh-4rem-1px)]">
           
-          <div className="relative sm:ml-28 xl:ml-56 pl-3 pr-3 h-auto py-3 z-10">
+          <div className="relative pl-3 pr-3 h-auto py-3 z-10">
             {children}
           </div>
         
