@@ -1,7 +1,7 @@
 "use client"
 
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, getKeyValue, Pagination, PaginationSlots } from "@nextui-org/react";
-import { useMemo, useState, useEffect, SetStateAction } from "react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Pagination, PaginationSlots, Input, Select, Selection, SelectItem } from "@nextui-org/react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { TableSlots, InputSlots, SortDescriptor } from "@nextui-org/react";
 
 
@@ -32,8 +32,13 @@ export type InputTableClassNames = {
   };
 }
 
+export type Accumulator = {
+  [key: string]: ColumnType["key"] | undefined;
+}
+
 export default function InputTable({
   columns, rows, 
+  inputColumns,
   tableLabel, displayTableLabel=false,
   isHeaderSticky=false, removeWrapper=false,
   displayTopContent=false, displayBottomContent=false,
@@ -46,6 +51,7 @@ export default function InputTable({
 }: Readonly<{
   columns: Array<ColumnType>;
   rows: Array<RowType>;
+  inputColumns?: Array<ColumnType["key"]>;
   tableLabel?: string;
   displayTableLabel?: boolean;
   isHeaderSticky?: boolean;
@@ -63,27 +69,87 @@ export default function InputTable({
   columnsAlignment?: "start" | "center" | "end";
   classNames?: InputTableClassNames;
 }>) {
+
   // Set with the selected rowsPerPage value, used in rowsPerPageSelector (TODO), or null
-  const [selectedRowsPerPageSet, setSelectedRowsPerPageSet] = useState(() => {
+  const [selectedRowsPerPageSet, setSelectedRowsPerPageSet] = useState<Selection>(() => {
     if (typeof rowsPerPage === 'number')
-      return new Set([rowsPerPage]);
+      return new Set([rowsPerPage.toString()]);
     else if (Array.isArray(rowsPerPage))
-      return new Set([rowsPerPage[0]]);
-    else return null;
+      return new Set([rowsPerPage[0].toString()]);
+    else return new Set([]);
   });
 
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({});
 
   const [displayedPage, setDisplayedPage] = useState(1);
 
-  // Hook to change selectedRowsPerPageSet if rowsPerPage prop is changed
-  useEffect(() => {
+  const [tableInputs, setTableInputs] = useState<Accumulator>(() => {
+
+    if (!inputColumns)
+      return {};
+
+    return (
+      // for each array row, add a key-value pair to the acc object 
+      // and pass it to the next iteration
+      // key: {row id} - {column id}
+      // value: {column value}
+      rows.reduce((acc: Accumulator, row) => {
+        Object.entries(row).forEach(([key, value]) => {
+          if (inputColumns.includes(key))
+            acc[`${row.id}-${key}`] = value;
+        });
+        return acc;
+      }, {})
+    );
+  });
+
+  const onInputChange = useCallback((rowId: RowType["id"], columnKey: ColumnType["key"], value: string) => {
+    
+    console.log("onInputChange fired", rowId, columnKey, value);
+
+    setTableInputs((prevInputs) => ({
+      ...prevInputs,
+      [`${rowId}-${columnKey}`]: value,
+    }));
+  }, []);
+
+  // const renderCell = useCallback((row: RowType, columnKey: ColumnType["key"]) => {
+
+  //   if (!inputColumns || !inputColumns.includes(columnKey)) {
+  //     return row[columnKey];
+  //   } else {
+
+  //     const inputValue = tableInputs[`${row.id}-${columnKey}`];
+  //     return (
+  //       <Input
+  //         value={typeof inputValue === "number" ? inputValue.toString() : inputValue}
+  //         onValueChange={(value: string) => onInputChange(row.id, columnKey, value)}
+  //         classNames={classNames?.input}
+  //       />
+  //     )
+  //   }
+  // }, [classNames?.input, inputColumns, onInputChange, tableInputs]);
+
+  // Generates an array of objects with key-value pairs: "key": string, "value": number
+  const rowsPerPageIterable = useMemo(() => {
     if (typeof rowsPerPage === 'number')
-      setSelectedRowsPerPageSet(new Set([rowsPerPage]));
+      return (
+        [{
+          "key": rowsPerPage.toString(),
+          "value": rowsPerPage
+        }] 
+      );
     else if (Array.isArray(rowsPerPage))
-      setSelectedRowsPerPageSet(new Set([rowsPerPage[0]]));
-    else setSelectedRowsPerPageSet(null);
-  }, [rowsPerPage])
+      return (
+        rowsPerPage.map((arrayRow) => (
+          {
+            "key": arrayRow.toString(),
+            "value": arrayRow
+          }
+        ))
+      )
+    else return [];
+  }, [rowsPerPage]);
 
   // numerical value of selectedRowsPerPageSet or null
   const selectedRowsPerPage = useMemo(() => {
@@ -100,11 +166,6 @@ export default function InputTable({
       return 1
   }, [rows.length, selectedRowsPerPage]);
 
-  // Hook to set the displayed page to 1 when totalPages changes
-  useEffect(() => {
-    setDisplayedPage(1);
-  }, [totalPages]);
-
   // Sorted rows depending on selected column, original rows if sorting isn't enabled
   const sortedRows = useMemo(() => {
 
@@ -115,8 +176,8 @@ export default function InputTable({
     const columnKey = sortDescriptor.column;
 
     return [...rows].sort((a, b) => {
-      let first = a[columnKey];
-      let second = b[columnKey];
+      const first = a[columnKey];
+      const second = b[columnKey];
 
       // Check that `first` and `second` are of type `string` or `number`
       const parsedFirst = typeof first === "string" ? parseInt(first) || first : first;
@@ -139,8 +200,8 @@ export default function InputTable({
     if (!selectedRowsPerPage)
       return sortedRows
 
-    const start = (displayedPage - 1) * selectedRowsPerPage;
-    const end = start + selectedRowsPerPage;
+    const start = (displayedPage - 1) * Number(selectedRowsPerPage);
+    const end = start + Number(selectedRowsPerPage);
 
     return sortedRows.slice(start,end)
   }, [displayedPage, sortedRows, selectedRowsPerPage]);
@@ -153,6 +214,34 @@ export default function InputTable({
         <div className={classNames?.topContent}>
         
           { displayTableLabel && <div>{tableLabel}</div> }
+
+          {displayRowsPerPageSelector && 
+            <div className="h-10">
+              <Select
+                variant="flat"
+                label="Entries"
+                labelPlacement="outside-left"
+                items={rowsPerPageIterable}
+                selectedKeys={selectedRowsPerPageSet}
+                onSelectionChange={setSelectedRowsPerPageSet}
+                classNames={{
+                  base: "items-center",
+                  mainWrapper: "w-16",
+                }}
+              >
+                {(entry) => (
+                  <SelectItem
+                    key={entry.key}
+                    value={entry.value}
+                    textValue={entry.key}
+                    hideSelectedIcon
+                  >
+                    {entry?.value}
+                  </SelectItem>
+                )}
+              </Select>
+            </div>
+          }
         
         </div>
         
@@ -160,7 +249,7 @@ export default function InputTable({
     } else 
       return <></>;
     
-  }, [displayTopContent, displayTableLabel, tableLabel]);
+  }, [displayTopContent, classNames?.topContent, displayTableLabel, tableLabel, displayRowsPerPageSelector, rowsPerPageIterable, selectedRowsPerPageSet]);
 
   // Bottom content of the array, currently only pagination
   const bottomContent = useMemo(() => {
@@ -190,6 +279,22 @@ export default function InputTable({
     } else
         return <></>;
   }, [classNames?.bottomContent, displayBottomContent, displayPagination, displayedPage, displayPaginationControls, totalPages]);
+
+
+  // Hook to set the displayed page to 1 when totalPages changes
+  useEffect(() => {
+    setDisplayedPage(1);
+  }, [totalPages]);
+
+  // Hook to change selectedRowsPerPageSet if rowsPerPage prop is changed
+  useEffect(() => {
+    if (typeof rowsPerPage === 'number')
+      setSelectedRowsPerPageSet(new Set([rowsPerPage.toString()]));
+    else if (Array.isArray(rowsPerPage))
+      setSelectedRowsPerPageSet(new Set([rowsPerPage[0].toString()]));
+    else setSelectedRowsPerPageSet(new Set([]));
+  }, [rowsPerPage]);
+
 
   return (
     <Table
@@ -221,17 +326,49 @@ export default function InputTable({
 
       </TableHeader>
 
-      <TableBody items={displayedRows}>
+      <TableBody >
 
-        {(item) => (
+        {displayedRows.map((row) => {
+          console.log("rendering row:", row)
+          return (
+            // <MemoizedInputTableRow
+            //   key={row.id}
+            //   row={row}
+            //   columns={columns}
+            //   tableInputs={tableInputs}
+            //   onInputChange={onInputChange}
+            //   inputClassNames={classNames?.input}
+            // />
+            <TableRow key={row.id}>   
 
-          <TableRow key={item.id}>
+              {(columnKey) => (
+              
+                <TableCell>
+                  
+                  {
+                    (!inputColumns || !inputColumns.includes(columnKey)) 
+                      ? row[columnKey]
+                      : (
+                          <Input
+                            value={
+                              tableInputs[`${row.id}-${columnKey}`] !== undefined
+                                ? tableInputs[`${row.id}-${columnKey}`]?.toString()
+                                : undefined
+                            }
+                            onValueChange={(value: string) => onInputChange(row.id, columnKey, value)}
+                            classNames={classNames?.input}
+                          />
+                        )
+                    
+                  }
+                  
+                </TableCell>
+              
+              )}
 
-            {(columnKey) => <TableCell>{getKeyValue(item, columnKey)}</TableCell>}
-
-          </TableRow>
-
-        )}
+            </TableRow>
+          )
+        })}
 
       </TableBody>
 
