@@ -122,7 +122,7 @@ export default function InputTable({
   // numerical value of selectedRowsPerPageSet or null
   const selectedRowsPerPage = useMemo(() => {
     if (selectedRowsPerPageSet)
-      return Array.from(selectedRowsPerPageSet)[0];
+      return Number(Array.from(selectedRowsPerPageSet)[0]);
     else 
      return null;
   }, [selectedRowsPerPageSet]);
