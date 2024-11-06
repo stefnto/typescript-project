@@ -81,54 +81,22 @@ export default function InputTable({
 
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({});
 
-  const [displayedPage, setDisplayedPage] = useState(1);
+  const [displayedPage, setDisplayedPage] = useState<number>(1);
 
-  const [tableInputs, setTableInputs] = useState<Accumulator>(() => {
+  const [tableRows, setTableRows] = useState<Array<RowType>>(rows);
 
-    if (!inputColumns)
-      return {};
-
-    return (
-      // for each array row, add a key-value pair to the acc object 
-      // and pass it to the next iteration
-      // key: {row id} - {column id}
-      // value: {column value}
-      rows.reduce((acc: Accumulator, row) => {
-        Object.entries(row).forEach(([key, value]) => {
-          if (inputColumns.includes(key))
-            acc[`${row.id}-${key}`] = value;
-        });
-        return acc;
-      }, {})
-    );
-  });
-
-  const onInputChange = useCallback((rowId: RowType["id"], columnKey: ColumnType["key"], value: string) => {
+  const onInputValueChange = useCallback((rowId: RowType["id"], columnKey: ColumnType["key"], value: string) => {
     
-    console.log("onInputChange fired", rowId, columnKey, value);
+    // Update only the specific cell without mutating the original state of the array
+    setTableRows((prevRows) =>
+      prevRows.map((row) =>
+        (row.id === rowId ) 
+          ? { ...row, [columnKey]: value } 
+          : row
+      )
+    );
 
-    setTableInputs((prevInputs) => ({
-      ...prevInputs,
-      [`${rowId}-${columnKey}`]: value,
-    }));
   }, []);
-
-  // const renderCell = useCallback((row: RowType, columnKey: ColumnType["key"]) => {
-
-  //   if (!inputColumns || !inputColumns.includes(columnKey)) {
-  //     return row[columnKey];
-  //   } else {
-
-  //     const inputValue = tableInputs[`${row.id}-${columnKey}`];
-  //     return (
-  //       <Input
-  //         value={typeof inputValue === "number" ? inputValue.toString() : inputValue}
-  //         onValueChange={(value: string) => onInputChange(row.id, columnKey, value)}
-  //         classNames={classNames?.input}
-  //       />
-  //     )
-  //   }
-  // }, [classNames?.input, inputColumns, onInputChange, tableInputs]);
 
   // Generates an array of objects with key-value pairs: "key": string, "value": number
   const rowsPerPageIterable = useMemo(() => {
@@ -161,21 +129,21 @@ export default function InputTable({
 
   const totalPages = useMemo(() => {
     if (typeof selectedRowsPerPage === 'number')
-      return Math.ceil(rows.length / selectedRowsPerPage);
+      return Math.ceil(tableRows.length / selectedRowsPerPage);
     else
       return 1
-  }, [rows.length, selectedRowsPerPage]);
+  }, [tableRows.length, selectedRowsPerPage]);
 
   // Sorted rows depending on selected column, original rows if sorting isn't enabled
   const sortedRows = useMemo(() => {
 
     // When sorting isn't enabled, sortDescriptor.column is undefined, so we return the original rows.
     if (!sortDescriptor.column)
-        return rows;
+        return tableRows;
       
     const columnKey = sortDescriptor.column;
 
-    return [...rows].sort((a, b) => {
+    return [...tableRows].sort((a, b) => {
       const first = a[columnKey];
       const second = b[columnKey];
 
@@ -191,7 +159,7 @@ export default function InputTable({
 
       return cmp;
     });
-  }, [sortDescriptor, rows]);
+  }, [sortDescriptor, tableRows]);
 
   // Rows that will be displayed in the current page, depending on the sortedRows list
   const displayedRows = useMemo(() => {
@@ -326,20 +294,12 @@ export default function InputTable({
 
       </TableHeader>
 
-      <TableBody >
+      <TableBody items={displayedRows}>
 
-        {displayedRows.map((row) => {
-          console.log("rendering row:", row)
+        {(item) => {
+          console.log("rendering row:", item)
           return (
-            // <MemoizedInputTableRow
-            //   key={row.id}
-            //   row={row}
-            //   columns={columns}
-            //   tableInputs={tableInputs}
-            //   onInputChange={onInputChange}
-            //   inputClassNames={classNames?.input}
-            // />
-            <TableRow key={row.id}>   
+            <TableRow key={item.id}>   
 
               {(columnKey) => (
               
@@ -347,19 +307,14 @@ export default function InputTable({
                   
                   {
                     (!inputColumns || !inputColumns.includes(columnKey)) 
-                      ? row[columnKey]
+                      ? item[columnKey]
                       : (
                           <Input
-                            value={
-                              tableInputs[`${row.id}-${columnKey}`] !== undefined
-                                ? tableInputs[`${row.id}-${columnKey}`]?.toString()
-                                : undefined
-                            }
-                            onValueChange={(value: string) => onInputChange(row.id, columnKey, value)}
+                            value={item[columnKey].toString()}
+                            onValueChange={(value) => onInputValueChange(item.id, columnKey, value)}
                             classNames={classNames?.input}
                           />
                         )
-                    
                   }
                   
                 </TableCell>
@@ -368,7 +323,7 @@ export default function InputTable({
 
             </TableRow>
           )
-        })}
+        }}
 
       </TableBody>
 
