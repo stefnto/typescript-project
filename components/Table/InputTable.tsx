@@ -1,6 +1,6 @@
 "use client"
 
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Pagination, PaginationSlots, Input, Select, Selection, SelectItem } from "@nextui-org/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Pagination, PaginationSlots, Input, Select, Selection, SelectItem, Button } from "@nextui-org/react";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { TableSlots, InputSlots, SortDescriptor } from "@nextui-org/react";
 import { useViewport } from "@/context/ViewportContext";
@@ -20,7 +20,10 @@ export type InputTableClassNames = {
   table?: {
     [key in TableSlots]?: string;
   },
-  topContent?: string;
+  topContent?: {
+    base?: string;
+    button?: string
+  };
   bottomContent?: {
     base?: string;
     paginationClassNames?: { 
@@ -39,7 +42,7 @@ export type Accumulator = {
 
 export default function InputTable({
   columns, rows, 
-  inputColumns,
+  inputColumns, handleEditedRows, saveButtonText,
   tableLabel, displayTableLabel=false,
   isHeaderSticky=false, removeWrapper=false,
   displayTopContent=false, displayBottomContent=false,
@@ -48,11 +51,13 @@ export default function InputTable({
   displayPagination=true, displayPaginationControls=true,
   enableSorting=false, sortableColumns,
   columnsAlignment="start",
-  classNames
+  classNames, 
 }: Readonly<{
   columns: Array<ColumnType>;
   rows: Array<RowType>;
   inputColumns?: Array<ColumnType["key"]>;
+  handleEditedRows: (editedRows: Array<RowType>) => Array<RowType> | void;
+  saveButtonText?: string
   tableLabel?: string;
   displayTableLabel?: boolean;
   isHeaderSticky?: boolean;
@@ -197,12 +202,21 @@ export default function InputTable({
     if (displayTopContent) {
       return (
 
-        <div className={ classNames?.topContent ? `flex ${classNames.topContent}` : `flex` }>
+        <div className={ classNames?.topContent?.base ? `flex gap-2 ${classNames.topContent.base}` : `flex` }>
         
           { displayTableLabel && <div className="my-auto">{tableLabel}</div> }
 
-          {displayRowsPerPageSelector && 
-            <div className="h-10">
+          
+          <div className="h-10 flex gap-4">
+
+            <Button
+              onPress={() => handleEditedRows(tableRows)}
+              className={classNames?.topContent?.button}
+            >
+              { saveButtonText ? saveButtonText : 'Save' }
+            </Button>
+
+            {displayRowsPerPageSelector && 
               <Select
                 variant="flat"
                 label="Entries"
@@ -227,8 +241,9 @@ export default function InputTable({
                   </SelectItem>
                 )}
               </Select>
-            </div>
-          }
+            }
+
+          </div>
         
         </div>
         
@@ -236,7 +251,7 @@ export default function InputTable({
     } else 
       return <></>;
     
-  }, [displayTopContent, classNames?.topContent, displayTableLabel, tableLabel, displayRowsPerPageSelector, rowsPerPageIterable, selectedRowsPerPageSet]);
+  }, [displayTopContent, classNames?.topContent?.base, classNames?.topContent?.button, displayTableLabel, tableLabel, saveButtonText, displayRowsPerPageSelector, rowsPerPageIterable, selectedRowsPerPageSet, handleEditedRows, tableRows]);
 
   // Bottom content of the array, currently only pagination
   const bottomContent = useMemo(() => { 
