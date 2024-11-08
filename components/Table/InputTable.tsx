@@ -3,6 +3,7 @@
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Pagination, PaginationSlots, Input, Select, Selection, SelectItem } from "@nextui-org/react";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { TableSlots, InputSlots, SortDescriptor } from "@nextui-org/react";
+import { useViewport } from "@/context/ViewportContext";
 
 
 export type ColumnType = {
@@ -70,6 +71,10 @@ export default function InputTable({
   classNames?: InputTableClassNames;
 }>) {
 
+  const width = useViewport();
+
+  const [tableMounted, setTableMounted] = useState(false);
+
   // Set with the selected rowsPerPage value, used in rowsPerPageSelector (TODO), or null
   const [selectedRowsPerPageSet, setSelectedRowsPerPageSet] = useState<Selection>(() => {
     if (typeof rowsPerPage === 'number')
@@ -96,6 +101,11 @@ export default function InputTable({
       )
     );
 
+  }, []);
+
+  // Component mounted
+  useEffect(() => {
+    setTableMounted(true);
   }, []);
 
   // Generates an array of objects with key-value pairs: "key": string, "value": number
@@ -134,11 +144,19 @@ export default function InputTable({
       return 1
   }, [tableRows.length, selectedRowsPerPage]);
 
+  const pagesSiblings = useMemo(() => {
+    if (width < 500)
+      return 0;
+
+    if (width > 500)
+      return 1
+  }, [width]);
+
   // Sorted rows depending on selected column, original rows if sorting isn't enabled
   const sortedRows = useMemo(() => {
 
     // When sorting isn't enabled, sortDescriptor.column is undefined, so we return the original rows.
-    if (!sortDescriptor.column)
+    if (!sortDescriptor?.column)
         return tableRows;
       
     const columnKey = sortDescriptor.column;
@@ -179,9 +197,9 @@ export default function InputTable({
     if (displayTopContent) {
       return (
 
-        <div className={classNames?.topContent}>
+        <div className={ classNames?.topContent ? `flex ${classNames.topContent}` : `flex` }>
         
-          { displayTableLabel && <div>{tableLabel}</div> }
+          { displayTableLabel && <div className="my-auto">{tableLabel}</div> }
 
           {displayRowsPerPageSelector && 
             <div className="h-10">
@@ -191,6 +209,7 @@ export default function InputTable({
                 labelPlacement="outside-left"
                 items={rowsPerPageIterable}
                 selectedKeys={selectedRowsPerPageSet}
+                disallowEmptySelection
                 onSelectionChange={setSelectedRowsPerPageSet}
                 classNames={{
                   base: "items-center",
@@ -220,7 +239,7 @@ export default function InputTable({
   }, [displayTopContent, classNames?.topContent, displayTableLabel, tableLabel, displayRowsPerPageSelector, rowsPerPageIterable, selectedRowsPerPageSet]);
 
   // Bottom content of the array, currently only pagination
-  const bottomContent = useMemo(() => {
+  const bottomContent = useMemo(() => { 
     if (displayBottomContent) {
       return (
         <div className={classNames?.bottomContent?.base}>
@@ -237,6 +256,7 @@ export default function InputTable({
               showControls={displayPaginationControls}
               page={displayedPage}
               total={totalPages}
+              siblings={pagesSiblings}
               onChange={(page) => { setDisplayedPage(page) }}
             />
           }
@@ -246,8 +266,14 @@ export default function InputTable({
       )
     } else
         return <></>;
-  }, [classNames?.bottomContent, displayBottomContent, displayPagination, displayedPage, displayPaginationControls, totalPages]);
+  }, [displayBottomContent, classNames?.bottomContent?.base, classNames?.bottomContent?.paginationClassNames, displayPagination, displayPaginationControls, displayedPage, totalPages, pagesSiblings]);
 
+  const tableClassNames = useMemo(() => {
+    return {
+      ... classNames?.table,
+      th: "px-6"
+    }
+  }, [classNames]);
 
   // Hook to set the displayed page to 1 when totalPages changes
   useEffect(() => {
@@ -263,10 +289,13 @@ export default function InputTable({
     else setSelectedRowsPerPageSet(new Set([]));
   }, [rowsPerPage]);
 
+  if (!tableMounted)
+    return null
 
   return (
     <Table
       aria-label={tableLabel}
+      classNames={tableClassNames}
       isHeaderSticky={isHeaderSticky}
       removeWrapper={removeWrapper}
       topContent={topContent}

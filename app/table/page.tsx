@@ -1,6 +1,7 @@
 import React from 'react'
 
 import InputTable, { ColumnType, RowType, InputTableClassNames } from "@/components/Table/InputTable";
+import { Card, CardBody } from "@nextui-org/card";
 
 const rows: Array<RowType> = [
   {
@@ -236,33 +237,47 @@ const sortableColumns = ["name", "role", "status"];
 const inputColumns = ["name", "role", "status"];
 
 const tableClassNames: InputTableClassNames = {
+  topContent: `justify-between`,
   bottomContent: {
     // base: "flex"
+  },
+  table: {
+    wrapper: "shadow-none py-0 pl-0 pr-2 rounded-t-none flex-1 justify-normal",
+  },
+  input: {
+    base: "min-w-[200px]",
+    // input: "text-center"
   }
 };
 
-const rowsPerPage = [12, 20, 30];
+const rowsPerPage = [2, 5, 10, 20, 30];
 
 const TablePage = () => {
   return (
-    <InputTable
-      columns={columns}
-      rows={rows}
-      inputColumns={inputColumns}
-      tableLabel="Status table"
-      displayTableLabel
-      isHeaderSticky
-      displayTopContent
-      displayBottomContent
-      // topContentPlacement='outside'
-      // bottomContentPlacement='outside'
-      rowsPerPage={rowsPerPage}
-      displayRowsPerPageSelector
-      enableSorting
-      sortableColumns={sortableColumns}
-      classNames={tableClassNames}
-      // displayPaginationControls={false}
-    />
+    <Card>
+      <CardBody>
+        <InputTable
+          columns={columns}
+          rows={rows}
+          inputColumns={inputColumns}
+          tableLabel="Status table"
+          displayTableLabel
+          isHeaderSticky
+          removeWrapper
+          displayTopContent
+          displayBottomContent
+          topContentPlacement='outside'
+          bottomContentPlacement='outside'
+          rowsPerPage={rowsPerPage}
+          displayRowsPerPageSelector
+          enableSorting
+          sortableColumns={sortableColumns}
+          classNames={tableClassNames}
+          // displayPaginationControls={false}
+        />
+      </CardBody>
+    </Card>
+    
   )
 }
 
